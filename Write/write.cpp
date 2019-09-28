@@ -1,10 +1,12 @@
 #include <Windows.h>
 #include <fstream>
-#include <iostream>
 #define BUFF_SIZE 16
 
-int main() {
-	std::ofstream fout("D:\\to.txt");
+int main(int argc, char* argv[]) {
+	std::ofstream fout;
+	if (argc != 0) {
+		fout.open(argv[0]);
+	}
 	//std::ofstream log("D:\\wlog.txt");
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
 	//if (hFileMapping == INVALID_HANDLE_VALUE) {

@@ -1,11 +1,13 @@
 #include <Windows.h>
-#include <iostream>
 #include <fstream>
 #define BUFF_SIZE 16
 
-int main() {
-	std::ifstream conf("D:\\config.txt");
-	
+int main(int argc, char* argv[]) {
+	std::ifstream conf;
+	if (argc > 1) {
+		conf.open(argv[1]);
+	}
+
 	conf.close();
 
 	HANDLE hFileMapping = CreateFileMapping(
@@ -59,12 +61,12 @@ int main() {
 	ZeroMemory(&pi1, sizeof(pi1));
 	ZeroMemory(&pi2, sizeof(pi2));
 
-	TCHAR read[] = TEXT("D:\\from.txt");
-	TCHAR write[] = TEXT("Write");
+	TCHAR fileToReadName[] = TEXT("D:\\from.txt");
+	TCHAR fileToWriteName[] = TEXT("D:\\to.txt");
 
 	// Start the child read process. 
 	if (!CreateProcess(TEXT("D:\\Visual Studio Prog\\OS2\\Main\\Debug\\Read.exe"),
-		read,        // Command line
+		fileToReadName,        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inherita
 		FALSE,          // Set handle inheritance to FALSE
@@ -80,7 +82,7 @@ int main() {
 	}
 
 	if (!CreateProcess(TEXT("D:\\Visual Studio Prog\\OS2\\Main\\Debug\\Write.exe"),
-		NULL,        // Command line
+		fileToWriteName,        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inherita
 		FALSE,          // Set handle inheritance to FALSE

@@ -1,13 +1,12 @@
 #include <Windows.h>
 #include <fstream>
-#include <iostream>
 #define BUFF_SIZE 16
 
 int main(int argc, char* argv[]) {
-	std::ifstream fin("D:\\from.txt");
-	/*if (argc > 1) {
-		fin.open(argv[1]);
-	}*/
+	std::ifstream fin;
+	if (argc != 0) {
+		fin.open(argv[0]);
+	}
 	//std::ofstream log("D:\\rlog.txt");
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
@@ -30,10 +29,12 @@ int main(int argc, char* argv[]) {
 		//log << "Opening closeEvent failed";
 		return 1;
 	}
-	//HANDLE hFile = CreateFile("D:\\from.txt", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	//if (hFile == INVALID_HANDLE_VALUE) {
-	//	return 1;
-	//}
+	if (argc != 0) {
+		HANDLE hFile = CreateFile(argv[0], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE) {
+			return 1;
+		}
+	}
 
 	while (!fin.eof()) {
 		WaitForSingleObject(hESem, INFINITE);
