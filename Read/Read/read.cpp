@@ -3,37 +3,44 @@
 #include <iostream>
 #define BUFF_SIZE 16
 
-int main() {
+int main(int argc, char* argv[]) {
 	std::ifstream fin("D:\\from.txt");
-	std::ofstream log("D:\\rlog.txt");
+	/*if (argc > 1) {
+		fin.open(argv[1]);
+	}*/
+	//std::ofstream log("D:\\rlog.txt");
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
-	if (hFileMapping == INVALID_HANDLE_VALUE)	{
-		log << "Opening FileMapping failed";
-		return 1;
-	}
-	HANDLE hESem = OpenSemaphore(NULL, FALSE, TEXT("eSem"));
+	//if (hFileMapping == INVALID_HANDLE_VALUE)	{
+	//	//log << "Opening FileMapping failed";
+	//	return 1;
+	//}
+	HANDLE hESem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
-		log << "Opening eSem failed";
+		//log << "Opening eSem failed";
 		return 1;
 	}
-	HANDLE hFSem = OpenSemaphore(NULL, FALSE, TEXT("fSem"));
+	HANDLE hFSem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("fSem"));
 	if (hFSem == INVALID_HANDLE_VALUE) {
-		log << "Opening fSem failed";
+		//log << "Opening fSem failed";
 		return 1;
 	}
-	HANDLE hCloseEvent = OpenEvent(NULL, FALSE, TEXT("closeEvent"));
+	HANDLE hCloseEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, TEXT("closeEvent"));
 	if (hCloseEvent == INVALID_HANDLE_VALUE) {
-		log << "Opening closeEvent failed";
+		//log << "Opening closeEvent failed";
 		return 1;
 	}
+	//HANDLE hFile = CreateFile("D:\\from.txt", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	//if (hFile == INVALID_HANDLE_VALUE) {
+	//	return 1;
+	//}
 
 	while (!fin.eof()) {
 		WaitForSingleObject(hESem, INFINITE);
 		PVOID pBuff = MapViewOfFile(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, BUFF_SIZE);
-		char temp[BUFF_SIZE];
+		TCHAR temp[BUFF_SIZE];
 		fin.read(temp, BUFF_SIZE);
-		CopyMemory(pBuff, (TCHAR*)temp, BUFF_SIZE * sizeof(TCHAR));
+		CopyMemory(pBuff, temp, BUFF_SIZE);
 		UnmapViewOfFile(pBuff);
 		ReleaseSemaphore(hFSem, 1, NULL);
 	}
@@ -42,8 +49,9 @@ int main() {
 	CloseHandle(hESem);
 	CloseHandle(hFSem);
 	CloseHandle(hCloseEvent);
+	//CloseHandle(hFile);
 	fin.close();
-	log.close();
+	//log.close();
 
 	return 0;
 }
