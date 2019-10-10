@@ -1,13 +1,25 @@
 #include <Windows.h>
 #include <fstream>
-#define BUFF_SIZE 16
+#define BUFF_SIZE 32
+
+void logToFile(std::string fileName, std::string info) {
+	std::ofstream log(fileName, std::ios_base::app);
+	SYSTEMTIME time;
+	GetSystemTime(&time);
+	log << '[' << time.wDay << '.' << time.wMonth << '.' << time.wYear << ' '
+		<< time.wHour << ':' << time.wMinute << ':' << time.wSecond << "." << time.wMilliseconds << ']';
+	log << ' ' << info;
+	log << '\n';
+	log.close();
+}
 
 int main(int argc, char* argv[]) {
 	std::ifstream fin;
+	std::string fileToLogName;
 	if (argc != 0) {
 		fin.open(argv[0]);
+		fileToLogName = std::string(argv[1]);
 	}
-	//std::ofstream log("D:\\rlog.txt");
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
 	//if (hFileMapping == INVALID_HANDLE_VALUE)	{
@@ -16,26 +28,30 @@ int main(int argc, char* argv[]) {
 	//}
 	HANDLE hESem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
-		//log << "Opening eSem failed";
+		logToFile(fileToLogName, "Opening eSem failed");
 		return 1;
+	}
+	else {
+		logToFile(fileToLogName, "eSem opened");
 	}
 	HANDLE hFSem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("fSem"));
 	if (hFSem == INVALID_HANDLE_VALUE) {
-		//log << "Opening fSem failed";
+		logToFile(fileToLogName, "Opening fSem failed");
 		return 1;
+	}
+	else {
+		logToFile(fileToLogName, "fSem opened");
 	}
 	HANDLE hCloseEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, TEXT("closeEvent"));
 	if (hCloseEvent == INVALID_HANDLE_VALUE) {
-		//log << "Opening closeEvent failed";
+		logToFile(fileToLogName, "Opening closeEvent failed");
 		return 1;
 	}
-	if (argc != 0) {
-		HANDLE hFile = CreateFile(argv[0], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE) {
-			return 1;
-		}
+	else {
+		logToFile(fileToLogName, "closeEvent opened");
 	}
-
+	
+	logToFile(fileToLogName, "Starting reading...");
 	while (!fin.eof()) {
 		WaitForSingleObject(hESem, INFINITE);
 		PVOID pBuff = MapViewOfFile(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, BUFF_SIZE);
@@ -50,9 +66,8 @@ int main(int argc, char* argv[]) {
 	CloseHandle(hESem);
 	CloseHandle(hFSem);
 	CloseHandle(hCloseEvent);
-	//CloseHandle(hFile);
 	fin.close();
-	//log.close();
+	logToFile(fileToLogName, "Program closed successfully");
 
 	return 0;
 }
