@@ -1,19 +1,7 @@
 #include <Windows.h>
 #include <fstream>
-#include <string>
+#include "Logger.h"
 #define BUFF_SIZE 32
-#define PROC_NAME "Main process"
-
-void logToFile(std::string fileName, std::string info) {
-	std::ofstream log(fileName, std::ios_base::app);
-	SYSTEMTIME time;
-	GetSystemTime(&time);
-	log << '[' << time.wDay << '.' << time.wMonth << '.' << time.wYear << ' '
-		<< time.wHour << ':' << time.wMinute << ':' << time.wSecond << "." << time.wMilliseconds << ']';
-	log << ' ' << "<<From " << PROC_NAME << ">> " << info;
-	log << '\n';
-	log.close();
-}
 
 int main(int argc, char* argv[]) {
 	std::ifstream conf;
@@ -46,12 +34,23 @@ int main(int argc, char* argv[]) {
 	}
 	temp.close();
 
-	logToFile(fileToLogName, "All files are available. Starting program");
-
 	std::string attributesForReadProc;
 	std::string attributesForWriteProc;
 	attributesForReadProc = "Read " + fileToReadName + ' ' + fileToLogName;
 	attributesForWriteProc = "Write " + fileToWriteName + ' ' + fileToLogName;
+
+	HANDLE hLogMutex = CreateMutex(
+		NULL,
+		FALSE,
+		TEXT("logMut")
+	);
+	if (hLogMutex == INVALID_HANDLE_VALUE) {
+		printf("LogMutex is not created");
+		return 1;
+	}
+
+	Logger logger(fileToLogName, "Main process", hLogMutex);
+	logger.log("All files are available. Starting program");
 
 	HANDLE hFileMapping = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
@@ -61,11 +60,11 @@ int main(int argc, char* argv[]) {
 		BUFF_SIZE,
 		TEXT("buff"));
 	if (hFileMapping == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogName, "CreateFileMapping error");
+		logger.log("CreateFileMapping error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogName, "FileMapping created");
+		logger.log("FileMapping created");
 	}
 	HANDLE hESem = CreateSemaphore(
 		NULL,
@@ -73,11 +72,11 @@ int main(int argc, char* argv[]) {
 		1,
 		TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogName, "CreateSemaphore1 error");
+		logger.log("CreateSemaphore1 error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogName, "Semaphore1 created");
+		logger.log("Semaphore1 created");
 	}
 	HANDLE hFSem = CreateSemaphore(
 		NULL,
@@ -85,11 +84,11 @@ int main(int argc, char* argv[]) {
 		1,
 		TEXT("fSem"));
 	if (hFSem == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogName, "CreateSemaphore2 error");
+		logger.log("CreateSemaphore2 error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogName, "Semaphore2 created");
+		logger.log("Semaphore2 created");
 	}
 	HANDLE hCloseEvent = CreateEvent(
 		NULL,
@@ -97,24 +96,11 @@ int main(int argc, char* argv[]) {
 		FALSE,
 		TEXT("closeEvent"));
 	if (hCloseEvent == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogName, "CreateEvent error");
+		logger.log("CreateEvent error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogName, "Event created");
-	}
-	HANDLE hLogSemaphore = CreateSemaphore(
-		NULL,
-		1,
-		1,
-		TEXT("logSem")
-	);
-	if (hLogSemaphore == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogName, "LogSemaphore creating error");
-		return 1;
-	}
-	else {
-		logToFile(fileToLogName, "LogSemaphore created");
+		logger.log("Event created");
 	}
 
 	STARTUPINFO si1 = { 0 };
@@ -142,15 +128,11 @@ int main(int argc, char* argv[]) {
 		&pi1)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "CreateProcess for reading failed");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("CreateProcess for reading failed");
 		return 1;
 	}
 	else {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "Process for reading created successfully");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("Process for reading created successfully");
 	}
 	if (!CreateProcess(NULL,
 		(TCHAR*)attributesForWriteProc.c_str(),        // Command line
@@ -164,15 +146,11 @@ int main(int argc, char* argv[]) {
 		&pi2)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "CreateProcess for writing failed");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("CreateProcess for writing failed");
 		return 1;
 	}
 	else {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "Process for writing created successfully");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("Process for writing created successfully");
 	}
 
 	// Wait until child process exits.
@@ -189,10 +167,8 @@ int main(int argc, char* argv[]) {
 	CloseHandle(hFSem);
 	CloseHandle(hCloseEvent);
 
-	WaitForSingleObject(hLogSemaphore, INFINITE);
-	logToFile(fileToLogName, "Program closed successfully");
-	ReleaseSemaphore(hLogSemaphore, 1, NULL);
-	CloseHandle(hLogSemaphore);
+	logger.log("Program closed successfully");
+	CloseHandle(hLogMutex);
 
 	return 0;
 }

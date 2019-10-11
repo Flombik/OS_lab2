@@ -1,18 +1,7 @@
 #include <Windows.h>
 #include <fstream>
+#include "Logger.h"
 #define BUFF_SIZE 32
-#define PROC_NAME "Write process"
-
-void logToFile(std::string fileName, std::string info) {
-	std::ofstream log(fileName, std::ios_base::app);
-	SYSTEMTIME time;
-	GetSystemTime(&time);
-	log << '[' << time.wDay << '.' << time.wMonth << '.' << time.wYear << ' '
-		<< time.wHour << ':' << time.wMinute << ':' << time.wSecond << "." << time.wMilliseconds << ']';
-	log << ' ' << "<<From " << PROC_NAME << ">> " << info;
-	log << '\n';
-	log.close();
-}
 
 int main(int argc, char* argv[]) {
 	std::ofstream fout;
@@ -22,10 +11,11 @@ int main(int argc, char* argv[]) {
 		fileToLogName = std::string(argv[2]);
 	}
 
-	HANDLE hLogSemaphore = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("logSem"));
-	if (hLogSemaphore == INVALID_HANDLE_VALUE) {
+	HANDLE hLogMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("logSem"));
+	if (hLogMutex == INVALID_HANDLE_VALUE) {
 		return 1;
 	}
+	Logger logger(fileToLogName, "Write process", hLogMutex);
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
 	//if (hFileMapping == INVALID_HANDLE_VALUE) {
@@ -34,43 +24,29 @@ int main(int argc, char* argv[]) {
 	//}
 	HANDLE hESem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "Opening eSem failed");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("Opening eSem failed");
 		return 1;
 	}
 	else {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "eSem opened");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("eSem opened");
 	}
 	HANDLE hFSem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("fSem"));
 	if (hFSem == INVALID_HANDLE_VALUE) {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "Opening fSem failed");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("Opening fSem failed");
 		return 1;
 	}
 	else {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "fSem opened");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("fSem opened");
 	}
 	HANDLE hCloseEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, TEXT("closeEvent"));
 	if (hCloseEvent == INVALID_HANDLE_VALUE) {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "Opening closeEvent failed");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("Opening closeEvent failed");
 		return 1;
 	}
 	else {
-		WaitForSingleObject(hLogSemaphore, INFINITE);
-		logToFile(fileToLogName, "closeEvent opened");
-		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		logger.log("closeEvent opened");
 	}
-	WaitForSingleObject(hLogSemaphore, INFINITE);
-	logToFile(fileToLogName, "Starting writing...");
-	ReleaseSemaphore(hLogSemaphore, 1, NULL);
+	logger.log("Starting writing...");
 	while (WaitForSingleObject(hCloseEvent, 0) != WAIT_OBJECT_0) {
 		WaitForSingleObject(hFSem, INFINITE);
 		PVOID pBuff = MapViewOfFile(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, BUFF_SIZE);
@@ -86,10 +62,8 @@ int main(int argc, char* argv[]) {
 	CloseHandle(hCloseEvent);
 	fout.close();
 
-	WaitForSingleObject(hLogSemaphore, INFINITE);
-	logToFile(fileToLogName, "Program closed successfully");
-	ReleaseSemaphore(hLogSemaphore, 1, NULL);
-	CloseHandle(hLogSemaphore);
+	logger.log("Program closed successfully");
+	CloseHandle(hLogMutex);
 
 	return 0;
 }
