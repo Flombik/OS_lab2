@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #define BUFF_SIZE 32
+#define PROC_NAME "Main process"
 
 void logToFile(std::string fileName, std::string info) {
 	std::ofstream log(fileName, std::ios_base::app);
@@ -9,7 +10,7 @@ void logToFile(std::string fileName, std::string info) {
 	GetSystemTime(&time);
 	log << '[' << time.wDay << '.' << time.wMonth << '.' << time.wYear << ' '
 		<< time.wHour << ':' << time.wMinute << ':' << time.wSecond << "." << time.wMilliseconds << ']';
-	log << ' ' << info;
+	log << ' ' << "<<From " << PROC_NAME << ">> " << info;
 	log << '\n';
 	log.close();
 }
@@ -25,31 +26,23 @@ int main(int argc, char* argv[]) {
 
 	std::string fileToReadName;
 	std::string fileToWriteName;
-	std::string fileToLogMainName;
-	std::string fileToLogReadName;
-	std::string fileToLogWriteName;
+	std::string fileToLogName;
 	conf >> fileToReadName;
 	conf >> fileToWriteName;
-	conf >> fileToLogMainName;
-	conf >> fileToLogReadName;
-	conf >> fileToLogWriteName;
+	conf >> fileToLogName;
 
 	conf.close();
 
 	std::ofstream temp;
-	temp.open(fileToLogMainName);
-	temp.close();
-	temp.open(fileToLogReadName);
-	temp.close();
-	temp.open(fileToLogWriteName);
+	temp.open(fileToLogName);
 	temp.close();
 
-	logToFile(fileToLogMainName, "Starting program");
+	logToFile(fileToLogName, "Starting program");
 
 	std::string attributesForReadProc;
 	std::string attributesForWriteProc;
-	attributesForReadProc = fileToReadName + ' ' + fileToLogReadName;
-	attributesForWriteProc = fileToWriteName + ' ' + fileToLogWriteName;
+	attributesForReadProc = fileToReadName + ' ' + fileToLogName;
+	attributesForWriteProc = fileToWriteName + ' ' + fileToLogName;
 
 	HANDLE hFileMapping = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
@@ -59,11 +52,11 @@ int main(int argc, char* argv[]) {
 		BUFF_SIZE,
 		TEXT("buff"));
 	if (hFileMapping == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogMainName, "CreateFileMapping error");
+		logToFile(fileToLogName, "CreateFileMapping error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "FileMapping created");
+		logToFile(fileToLogName, "FileMapping created");
 	}
 	HANDLE hESem = CreateSemaphore(
 		NULL,
@@ -71,11 +64,11 @@ int main(int argc, char* argv[]) {
 		1,
 		TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogMainName, "CreateSemaphore1 error");
+		logToFile(fileToLogName, "CreateSemaphore1 error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "Semaphore1 created");
+		logToFile(fileToLogName, "Semaphore1 created");
 	}
 	HANDLE hFSem = CreateSemaphore(
 		NULL,
@@ -83,11 +76,11 @@ int main(int argc, char* argv[]) {
 		1,
 		TEXT("fSem"));
 	if (hFSem == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogMainName, "CreateSemaphore2 error");
+		logToFile(fileToLogName, "CreateSemaphore2 error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "Semaphore2 created");
+		logToFile(fileToLogName, "Semaphore2 created");
 	}
 	HANDLE hCloseEvent = CreateEvent(
 		NULL,
@@ -95,11 +88,24 @@ int main(int argc, char* argv[]) {
 		FALSE,
 		TEXT("closeEvent"));
 	if (hCloseEvent == INVALID_HANDLE_VALUE) {
-		logToFile(fileToLogMainName, "CreateEvent error");
+		logToFile(fileToLogName, "CreateEvent error");
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "Event created");
+		logToFile(fileToLogName, "Event created");
+	}
+	HANDLE hLogSemaphore = CreateSemaphore(
+		NULL,
+		1,
+		1,
+		TEXT("logSem")
+	);
+	if (hLogSemaphore == INVALID_HANDLE_VALUE) {
+		logToFile(fileToLogName, "LogSemaphore creating error");
+		return 1;
+	}
+	else {
+		logToFile(fileToLogName, "LogSemaphore created");
 	}
 
 	STARTUPINFO si1 = { 0 };
@@ -127,11 +133,15 @@ int main(int argc, char* argv[]) {
 		&pi1)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		logToFile(fileToLogMainName, "CreateProcess for reading failed");
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "CreateProcess for reading failed");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "Process for reading created successfully");
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "Process for reading created successfully");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
 	}
 	if (!CreateProcess(TEXT("D:\\Visual Studio Prog\\OS2\\Main\\Debug\\Write.exe"),
 		(TCHAR*)attributesForWriteProc.c_str(),        // Command line
@@ -145,11 +155,15 @@ int main(int argc, char* argv[]) {
 		&pi2)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		logToFile(fileToLogMainName, "CreateProcess for writing failed");
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "CreateProcess for writing failed");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
 		return 1;
 	}
 	else {
-		logToFile(fileToLogMainName, "Process for writing created successfully");
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "Process for writing created successfully");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
 	}
 
 	// Wait until child process exits.
@@ -166,7 +180,10 @@ int main(int argc, char* argv[]) {
 	CloseHandle(hFSem);
 	CloseHandle(hCloseEvent);
 
-	logToFile(fileToLogMainName, "Program closed successfully");
+	WaitForSingleObject(hLogSemaphore, INFINITE);
+	logToFile(fileToLogName, "Program closed successfully");
+	ReleaseSemaphore(hLogSemaphore, 1, NULL);
+	CloseHandle(hLogSemaphore);
 
 	return 0;
 }
