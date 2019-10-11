@@ -17,9 +17,9 @@ void logToFile(std::string fileName, std::string info) {
 int main(int argc, char* argv[]) {
 	std::ifstream fin;
 	std::string fileToLogName;
-	if (argc != 0) {
-		fin.open(argv[0]);
-		fileToLogName = std::string(argv[1]);
+	if (argc > 1) {
+		fin.open(argv[1]);
+		fileToLogName = std::string(argv[2]);
 	}
 
 	HANDLE hLogSemaphore = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("logSem"));
@@ -28,10 +28,17 @@ int main(int argc, char* argv[]) {
 	}
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
-	//if (hFileMapping == INVALID_HANDLE_VALUE)	{
-	//	//log << "Opening FileMapping failed";
-	//	return 1;
-	//}
+	/*if (GetLastError() == ERROR_ACCESS_DENIED)	{
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "Opening FileMapping failed");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+		return 1;
+	}
+	else {
+		WaitForSingleObject(hLogSemaphore, INFINITE);
+		logToFile(fileToLogName, "FileMapping opened");
+		ReleaseSemaphore(hLogSemaphore, 1, NULL);
+	}*/
 	HANDLE hESem = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("eSem"));
 	if (hESem == INVALID_HANDLE_VALUE) {
 		WaitForSingleObject(hLogSemaphore, INFINITE);

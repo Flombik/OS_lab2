@@ -17,9 +17,9 @@ void logToFile(std::string fileName, std::string info) {
 int main(int argc, char* argv[]) {
 	std::ofstream fout;
 	std::string fileToLogName;
-	if (argc != 0) {
-		fout.open(argv[0]);
-		fileToLogName = std::string(argv[1]);
+	if (argc > 1) {
+		fout.open(argv[1]);
+		fileToLogName = std::string(argv[2]);
 	}
 
 	HANDLE hLogSemaphore = OpenSemaphore(SEMAPHORE_ALL_ACCESS, FALSE, TEXT("logSem"));

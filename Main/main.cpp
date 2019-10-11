@@ -24,6 +24,11 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
+	if (!conf) {
+		printf("Configuration file is not opened! Closing program...");
+		return 1;
+	}
+
 	std::string fileToReadName;
 	std::string fileToWriteName;
 	std::string fileToLogName;
@@ -35,14 +40,18 @@ int main(int argc, char* argv[]) {
 
 	std::ofstream temp;
 	temp.open(fileToLogName);
+	if (!conf) {
+		printf("Log file is not opened! Closing program...");
+		return 1;
+	}
 	temp.close();
 
-	logToFile(fileToLogName, "Starting program");
+	logToFile(fileToLogName, "All files are available. Starting program");
 
 	std::string attributesForReadProc;
 	std::string attributesForWriteProc;
-	attributesForReadProc = fileToReadName + ' ' + fileToLogName;
-	attributesForWriteProc = fileToWriteName + ' ' + fileToLogName;
+	attributesForReadProc = "Read " + fileToReadName + ' ' + fileToLogName;
+	attributesForWriteProc = "Write " + fileToWriteName + ' ' + fileToLogName;
 
 	HANDLE hFileMapping = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
@@ -121,7 +130,7 @@ int main(int argc, char* argv[]) {
 	ZeroMemory(&pi2, sizeof(pi2));
 
 	// Start the child read process. 
-	if (!CreateProcess(TEXT("D:\\Visual Studio Prog\\OS2\\Main\\Debug\\Read.exe"),
+	if (!CreateProcess(NULL,
 		(TCHAR*)attributesForReadProc.c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inherita
@@ -143,7 +152,7 @@ int main(int argc, char* argv[]) {
 		logToFile(fileToLogName, "Process for reading created successfully");
 		ReleaseSemaphore(hLogSemaphore, 1, NULL);
 	}
-	if (!CreateProcess(TEXT("D:\\Visual Studio Prog\\OS2\\Main\\Debug\\Write.exe"),
+	if (!CreateProcess(NULL,
 		(TCHAR*)attributesForWriteProc.c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inherita
