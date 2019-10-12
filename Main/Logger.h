@@ -6,7 +6,7 @@
 class Logger
 {
 public:
-	Logger(std::string fileName, std::string procName, HANDLE hMut);
+	Logger(std::string fileName, std::string procName);
 	void log(std::string info);
 
 private:

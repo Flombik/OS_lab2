@@ -11,11 +11,7 @@ int main(int argc, char* argv[]) {
 		fileToLogName = std::string(argv[2]);
 	}
 
-	HANDLE hLogMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("logMut"));
-	if (hLogMutex == INVALID_HANDLE_VALUE) {
-		return 1;
-	}
-	Logger logger(fileToLogName, "Write process", hLogMutex);
+	Logger logger(fileToLogName, "Write process");
 
 	HANDLE hFileMapping = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, TEXT("buff"));
 	//if (hFileMapping == INVALID_HANDLE_VALUE) {
@@ -63,7 +59,6 @@ int main(int argc, char* argv[]) {
 	fout.close();
 
 	logger.log("Program closed successfully");
-	CloseHandle(hLogMutex);
 
 	return 0;
 }

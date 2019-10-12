@@ -1,9 +1,12 @@
 #include "Logger.h"
 
-Logger::Logger(std::string fileName, std::string procName, HANDLE hMut) {
+Logger::Logger(std::string fileName, std::string procName) {
 	this->fileName = fileName;
 	this->procName = procName;
-	this->hMut = hMut;
+	this->hMut = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("logMut"));
+	if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+		this->hMut = CreateMutex(NULL, FALSE, TEXT("logMut"));
+	}
 }
 
 void Logger::log(std::string info) {

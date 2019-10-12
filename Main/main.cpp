@@ -39,17 +39,7 @@ int main(int argc, char* argv[]) {
 	attributesForReadProc = "Read " + fileToReadName + ' ' + fileToLogName;
 	attributesForWriteProc = "Write " + fileToWriteName + ' ' + fileToLogName;
 
-	HANDLE hLogMutex = CreateMutex(
-		NULL,
-		FALSE,
-		TEXT("logMut")
-	);
-	if (hLogMutex == INVALID_HANDLE_VALUE) {
-		printf("LogMutex is not created");
-		return 1;
-	}
-
-	Logger logger(fileToLogName, "Main process", hLogMutex);
+	Logger logger(fileToLogName, "Main process");
 	logger.log("All files are available. Starting program");
 
 	HANDLE hFileMapping = CreateFileMapping(
@@ -168,7 +158,6 @@ int main(int argc, char* argv[]) {
 	CloseHandle(hCloseEvent);
 
 	logger.log("Program closed successfully");
-	CloseHandle(hLogMutex);
 
 	return 0;
 }
