@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
 		fileToLogName = std::string(argv[2]);
 	}
 
-	HANDLE hLogMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("logSem"));
+	HANDLE hLogMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, TEXT("logMut"));
 	if (hLogMutex == INVALID_HANDLE_VALUE) {
 		return 1;
 	}
